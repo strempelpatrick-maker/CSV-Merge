@@ -5,6 +5,7 @@ import pandas as pd
 
 from merge_lib import (
     DEFAULT_ENCODING,
+    COMMON_ENCODINGS,
     MergeOptions,
     read_csv_bytes,
     merge_frames,
@@ -39,7 +40,12 @@ with st.sidebar:
     elif delimiter_choice != "auto":
         delimiter = delimiter_choice
 
-    encoding = st.selectbox("Encoding", [DEFAULT_ENCODING, "utf-8", "cp1252", "latin1"], index=0)
+    encoding = st.selectbox(
+        "Encoding",
+        ["auto", DEFAULT_ENCODING, "utf-8", "cp1252", "latin1"],
+        index=0,
+        help="auto versucht nacheinander utf-8-sig/utf-8/cp1252/latin1",
+    )
 
     add_source = st.checkbox("Spalte _source_file hinzufügen", value=True)
     dedupe = st.checkbox("Duplikate entfernen (smart)", value=False, disabled=(mode != "smart"))
@@ -72,15 +78,21 @@ if total_size > 200 * 1024 * 1024:
 frames: list[pd.DataFrame] = []
 names: list[str] = []
 delims: list[str] = []
+encs: list[str] = []
 
 for u in uploads:
     b = u.getvalue()
-    df, used = read_csv_bytes(b, delimiter=opt.delimiter, encoding=opt.encoding)
+    df, used_delim, used_enc = read_csv_bytes(b, delimiter=opt.delimiter, encoding=opt.encoding)
     frames.append(df)
     names.append(u.name)
-    delims.append(used)
+    delims.append(used_delim)
+    encs.append(used_enc)
 
-st.info(f"Erkannte/benutzte Delimiter: {', '.join(sorted(set(repr(d) for d in delims)))}")
+st.info(
+    "Erkannt/benutzt → "
+    f"Delimiter: {', '.join(sorted(set(repr(d) for d in delims)))} | "
+    f"Encoding: {', '.join(sorted(set(encs)))}"
+)
 
 try:
     merged = merge_frames(frames, names, opt)

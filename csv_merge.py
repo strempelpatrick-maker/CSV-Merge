@@ -40,7 +40,7 @@ def main() -> None:
     ap.add_argument("--pattern", default="*.csv", help="Pattern für Ordner-Input (default: *.csv)")
     ap.add_argument("-o", "--output", required=True, help="Output-Datei (z.B. merged.csv)")
     ap.add_argument("-d", "--delimiter", default=None, help="Delimiter (z.B. ';' oder ','); default=auto")
-    ap.add_argument("--encoding", default=DEFAULT_ENCODING, help=f"Encoding (default: {DEFAULT_ENCODING})")
+    ap.add_argument("--encoding", default="auto", help="Encoding (auto|utf-8-sig|utf-8|cp1252|latin1)")
     ap.add_argument("--mode", choices=["fast", "smart"], default="fast")
     ap.add_argument("--how", choices=["union", "intersection", "strict"], default="union")
     ap.add_argument("--add-source", action="store_true", help="Spalte _source_file hinzufügen")
@@ -64,13 +64,15 @@ def main() -> None:
     frames = []
     names = []
     delims = []
+    encs = []
 
     for f in files:
         b = f.read_bytes()
-        df, used = read_csv_bytes(b, delimiter=opt.delimiter, encoding=opt.encoding)
+        df, used_delim, used_enc = read_csv_bytes(b, delimiter=opt.delimiter, encoding=opt.encoding)
         frames.append(df)
         names.append(f.name)
-        delims.append(used)
+        delims.append(used_delim)
+        encs.append(used_enc)
 
     merged = merge_frames(frames, names, opt)
 
@@ -83,7 +85,7 @@ def main() -> None:
 
     print(
         f"OK: {len(files)} Datei(en) -> {out_path} | rows={len(merged)} cols={len(merged.columns)} "
-        f"| delim={repr(out_delim)} mode={opt.mode}"
+        f"| delim={repr(out_delim)} mode={opt.mode} enc_used={sorted(set(encs))}"
     )
 
 
